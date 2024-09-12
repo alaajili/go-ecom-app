@@ -3,6 +3,7 @@ package handlers
 import (
 	"go-ecommerce-app/internal/api/rest"
 	"go-ecommerce-app/internal/dto"
+	"go-ecommerce-app/internal/repository"
 	"go-ecommerce-app/internal/service"
 
 	"github.com/gofiber/fiber/v2"
@@ -16,7 +17,9 @@ type UserHandler struct {
 func SetupUserRoutes(rh *rest.RestHandler) {
 	app := rh.App
 
-	svc := service.UserService{}
+	svc := service.UserService{
+		Repo: repository.NewUserRepository(rh.DB),
+	}
 	handler := UserHandler{
 		svc: svc,
 	}
@@ -59,8 +62,25 @@ func (uh *UserHandler) Register(ctx *fiber.Ctx) error {
 	})
 }
 func (uh *UserHandler) Login(ctx *fiber.Ctx) error {
+
+	loginInput :=  dto.UserLoginDto{}
+	err := ctx.BodyParser(&loginInput)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
+			"message": "Invalid input",
+		})
+	}
+
+	token, err := uh.svc.Login(loginInput.Email, loginInput.Password)
+	if err != nil {
+		return ctx.Status(fiber.StatusUnauthorized).JSON(&fiber.Map{
+			"message": "Invalid credientials",
+		})
+	}
+
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "Login",
+		"token": token,
 	})
 }
 
