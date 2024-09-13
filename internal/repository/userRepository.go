@@ -14,7 +14,7 @@ import (
 type UserRepository interface {
 	CreateUser(user domain.User) (domain.User, error)
 	FindUserByEmail(email string) (domain.User, error)
-	FindUserById(id string) (domain.User, error)
+	FindUserById(id uint) (domain.User, error)
 	UpdateUser(id uint, user domain.User) (domain.User, error)
 }
 
@@ -50,7 +50,7 @@ func (r userRepository) FindUserByEmail(email string) (domain.User, error) {
 	return user, nil
 }
 
-func (r userRepository) FindUserById(id string) (domain.User, error) {
+func (r userRepository) FindUserById(id uint) (domain.User, error) {
 	var user domain.User
 
 	err := r.db.First(&user, id).Error

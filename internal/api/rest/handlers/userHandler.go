@@ -19,27 +19,32 @@ func SetupUserRoutes(rh *rest.RestHandler) {
 
 	svc := service.UserService{
 		Repo: repository.NewUserRepository(rh.DB),
+		Auth: rh.Auth,
 	}
 	handler := UserHandler{
 		svc: svc,
 	}
 
 	// public routes
-	app.Post("/register", handler.Register)
-	app.Post("/login", handler.Login)
+	publicRoutes := app.Group("/users")
+
+	publicRoutes.Post("/register", handler.Register)
+	publicRoutes.Post("/login", handler.Login)
 
 	// private routes
-	app.Get("/verify", handler.GetVerificationCode)
-	app.Post("/verify", handler.Verify)
-	app.Get("/profile", handler.GetProfile)
-	app.Post("/profile", handler.CreateProfile)
+	privateRoutes := publicRoutes.Group("/", rh.Auth.Authorize)
 
-	app.Post("/cart", handler.AddToCart)
-	app.Get("/cart", handler.GetCart)
-	app.Get("/order", handler.GetOrders)
-	app.Get("/order/:id", handler.GetOrder)
+	privateRoutes.Get("/profile", handler.GetProfile)
+	privateRoutes.Get("/verify", handler.GetVerificationCode)
+	privateRoutes.Post("/verify", handler.Verify)
+	privateRoutes.Post("/profile", handler.CreateProfile)
 
-	app.Get("/become-seller", handler.BecomeSeller)
+	privateRoutes.Post("/cart", handler.AddToCart)
+	privateRoutes.Get("/cart", handler.GetCart)
+	privateRoutes.Get("/order", handler.GetOrders)
+	privateRoutes.Get("/order/:id", handler.GetOrder)
+
+	privateRoutes.Get("/become-seller", handler.BecomeSeller)
 }
 
 func (uh *UserHandler) Register(ctx *fiber.Ctx) error {
@@ -57,8 +62,10 @@ func (uh *UserHandler) Register(ctx *fiber.Ctx) error {
 			"message": err.Error(),
 		})
 	}
-	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
-		"message": token,
+	
+	return ctx.Status(fiber.StatusCreated).JSON(fiber.Map{
+		"message": "Registered",
+		"token": token,
 	})
 }
 func (uh *UserHandler) Login(ctx *fiber.Ctx) error {
@@ -78,28 +85,59 @@ func (uh *UserHandler) Login(ctx *fiber.Ctx) error {
 		})
 	}
 
-	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
+	return ctx.Status(fiber.StatusOK).JSON(&fiber.Map{
 		"message": "Login",
 		"token": token,
 	})
 }
 
+func (uh *UserHandler) GetProfile(ctx *fiber.Ctx) error {
+	user := uh.svc.Auth.GetCurrentUser(ctx)
+	return ctx.Status(fiber.StatusOK).JSON(&fiber.Map{
+		"message": "Get Profile",
+		"user": user,
+	})
+}
+
 func (uh *UserHandler) GetVerificationCode(ctx *fiber.Ctx) error {
-	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
-		"message": "verify",
+
+	user := uh.svc.Auth.GetCurrentUser(ctx)
+
+	code, err := uh.svc.GetVerificationCode(user)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
+			"message": err.Error(),
+		})
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(&fiber.Map{
+		"message": "get verification code",
+		"code": code,
 	})
 }
 func (uh *UserHandler) Verify(ctx *fiber.Ctx) error {
+
+	user := uh.svc.Auth.GetCurrentUser(ctx)
+
+	var req dto.VerificationCodeDto
+	if err := ctx.BodyParser(&req); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
+			"message": "Invalid input",
+		})
+	}
+
+	err := uh.svc.VerifyCode(user.ID, req.Code)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
+			"message": err.Error(),
+		})
+	}
+
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
-		"message": "verify",
+		"message": "user verified successfully",
 	})
 }
 func (uh *UserHandler) CreateProfile(ctx *fiber.Ctx) error {
-	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
-		"message": "Login",
-	})
-}
-func (uh *UserHandler) GetProfile(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "Login",
 	})
