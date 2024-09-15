@@ -20,6 +20,7 @@ func SetupUserRoutes(rh *rest.RestHandler) {
 	svc := service.UserService{
 		Repo: repository.NewUserRepository(rh.DB),
 		Auth: rh.Auth,
+		Config: rh.Config,
 	}
 	handler := UserHandler{
 		svc: svc,
@@ -68,6 +69,7 @@ func (uh *UserHandler) Register(ctx *fiber.Ctx) error {
 		"token": token,
 	})
 }
+
 func (uh *UserHandler) Login(ctx *fiber.Ctx) error {
 
 	loginInput :=  dto.UserLoginDto{}
@@ -103,7 +105,7 @@ func (uh *UserHandler) GetVerificationCode(ctx *fiber.Ctx) error {
 
 	user := uh.svc.Auth.GetCurrentUser(ctx)
 
-	code, err := uh.svc.GetVerificationCode(user)
+	err := uh.svc.GetVerificationCode(user)
 	if err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
 			"message": err.Error(),
@@ -112,9 +114,9 @@ func (uh *UserHandler) GetVerificationCode(ctx *fiber.Ctx) error {
 
 	return ctx.Status(fiber.StatusOK).JSON(&fiber.Map{
 		"message": "get verification code",
-		"code": code,
 	})
 }
+
 func (uh *UserHandler) Verify(ctx *fiber.Ctx) error {
 
 	user := uh.svc.Auth.GetCurrentUser(ctx)
