@@ -13,3 +13,12 @@ type UserRegisterDto struct {
 type VerificationCodeDto struct {
 	Code	int	`json:"code"`
 }
+
+type BecomeSellerDto struct {
+	FirstName		string	`json:"first_name"`
+	LastName		string	`json:"last_name"`
+	Phone			string	`json:"phone"`
+	AccountNumber	uint	`json:"account_number"`
+	SwiftCode		string	`json:"swift_code"`
+	PaymentType		string	`json:"payment_type"`
+}
