@@ -119,6 +119,7 @@ func (a Auth) Authorize(ctx *fiber.Ctx) error {
 			"reason": "Authorization header is required",
 		})
 	}
+
 	user, err := a.VerifyToken(authHeader[0])
 	if err == nil && user.ID > 0 {
 		ctx.Locals("user", user)
@@ -129,7 +130,6 @@ func (a Auth) Authorize(ctx *fiber.Ctx) error {
 			"reason": err.Error(),
 		})
 	}
-
 }
 
 func (a Auth) GetCurrentUser(ctx *fiber.Ctx) domain.User {
@@ -141,3 +141,31 @@ func (a Auth) GenerateCode() (int, error) {
 	return RandomNumbers(6)
 }
 
+func (a Auth) AuthorizeSeller(ctx *fiber.Ctx) error {
+
+	authHeader := ctx.GetReqHeaders()["Authorization"]
+	if len(authHeader) < 1 {
+		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"message": "Unauthorized",
+			"reason": "Authorization header is required",
+		})
+	}
+
+	user, err := a.VerifyToken(authHeader[0])
+	if err != nil {
+		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"message": "Unauthorized",
+			"reason": err.Error(),
+		})
+	}
+
+	if user.ID > 0 && user.UserType == domain.SELLER {
+		ctx.Locals("user", user)
+		return ctx.Next()
+	} else {
+		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"message": "Unauthorized",
+			"reason": "please join as a seller to access this route",
+		})
+	}
+}
